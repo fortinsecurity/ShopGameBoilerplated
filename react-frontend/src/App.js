@@ -1,3 +1,10 @@
+/* 
+  TODO:
+    init user inventory and shop stock properly after login
+    buying oranges gives kiwis
+    shop travel?
+*/
+
 import React from 'react';
 import './App.css';
 
@@ -17,7 +24,8 @@ class App extends React.Component {
         "password": "",
         "loggedIn": false
       },
-      "currentShop": 0, // array index and NOT shop id
+      "currentShop": 1,
+      "currentShopArrId": 0,
       "shops": [
         {
           "id": 1,
@@ -25,26 +33,13 @@ class App extends React.Component {
           "description": "some shop somewhere",
           "products": [
             {
-              "id": 1,
-              "name": "Apples",
-              "price": 300,
-              "ask_price": 350,
-              "stock": 50
-            },
-            {
-              "id": 2,
-              "name": "Bananas",
-              "price": 300,
-              "ask_price": 350,
-              "stock": 50
-            },
-            {
-              "id": 3,
-              "name": "Oranges",
-              "price": 600,
-              "ask_price": 650,
-              "stock": 50
-            },
+              "id": 0,
+              "name": "Dummy",
+              "description": null,
+              "stock": 0,
+              "price": 0,
+              "ask_price": 0
+            }
           ]
         },
         {
@@ -53,42 +48,17 @@ class App extends React.Component {
           "description": "some shop somewhere",
           "products": [
             {
-              "id": 1,
-              "name": "Apples",
-              "price": 100,
-              "ask_price": 150,
-              "stock": 10
-            },
-            {
-              "id": 2,
-              "name": "Bananas",
-              "price": 100,
-              "ask_price": 150,
-              "stock": 10
-            },
-            {
-              "id": 3,
-              "name": "Oranges",
-              "price": 900,
-              "ask_price": 950,
-              "stock": 10
-            },
+              "id": 0,
+              "name": "Dummy",
+              "description": null,
+              "stock": 0,
+              "price": 0,
+              "ask_price": 0
+            }
           ]
         }
       ],
       "userStock": [
-        {
-          "id": 1,
-          "name": "Apples",
-          "description": "",
-          "quantity": 5,
-        },
-        {
-          "id": 2,
-          "name": "Bananas",
-          "description": "",
-          "quantity": 2,
-        },
       ]
     };
 
@@ -139,7 +109,7 @@ class App extends React.Component {
     }
   }
 
-  async getUserBasicData() {
+  async getUserData() {
     const formData = new FormData();
     formData.append('username', this.state.userBasic.username);
     formData.append('password', this.state.userBasic.password);
@@ -151,14 +121,15 @@ class App extends React.Component {
       }
     });
     if (res.status == 200) {
-      let userBasicDataJson = await res.json();
+      let { userBasic, userStock } = await res.json();
       // update state
       let newUserBasic = Object.assign({}, this.state.userBasic);
       newUserBasic.loggedIn = true
-      newUserBasic.username = userBasicDataJson.username;
-      newUserBasic.capital = userBasicDataJson.capital;
+      newUserBasic.username = userBasic.username;
+      newUserBasic.capital = userBasic.capital;
       this.setState({
         userBasic: newUserBasic,
+        userStock: userStock,
         statusMessage: "Successfully logged in as " + newUserBasic.username + "."
       })
     } else {
@@ -166,16 +137,14 @@ class App extends React.Component {
     }
   }
 
+  async getUserInventory() {
+
+  }
+
   async handleSubmit(e) {
     e.preventDefault();
-    // login form
-
-    
     await this.getToken(e);
-
-    
-    await this.getUserBasicData();
-
+    await this.getUserData();
 
     // get user info and populate state
     /*       const res = await fetch(`${this.BACKEND_SERVER_URL}/users/me`, {
@@ -190,10 +159,6 @@ class App extends React.Component {
           })
           const json = await res.json();
           setNotes([...notes, json]) */
-
-
-
-
   }
 
   async handleLogout(e) {
@@ -207,12 +172,64 @@ class App extends React.Component {
   }
 
   /* 
+    OLD
     deduce from user capital
     deduce from shop stock
   */
 
-  handleBuy(productid) {
+  /* 
+    POST to /shops/buy, 
+    update userBasic with resulting user capital.
+    shop stock is going to be reduced on the frontend if everything went well (see main method)
+  
+  */
+
+  // helper
+  async postBuyProduct(shopid, productid, quantity) {
+    const res = await fetch(`${this.BACKEND_SERVER_URL}/shops/buy`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        shop_id: shopid,
+        id: productid,
+        quantity: quantity
+      })
+    })
+    if (res.status == 200) {
+      let { userBasic, userStock } = await res.json();
+      // update state
+      let newUserBasic = Object.assign({}, this.state.userBasic);
+      console.log("newUserBasic: ", newUserBasic);
+      console.log("userBasic: ", userBasic);
+      newUserBasic.capital = userBasic.capital;
+      this.setState({
+        userBasic: newUserBasic,
+        userStock: userStock
+      })
+      return true
+    } else {
+      alert("Failed buying the item.")
+    }
+  }
+
+  async handleBuy(productid) {
     console.log("clicked buy: ", productid);
+    const shopid = this.state.currentShop;
+    const buyResult = await this.postBuyProduct(shopid, productid, 1);
+    if (buyResult) {
+      // deduce from shop stock
+      let newShopState = Object.assign({}, this.state.shops[this.state.currentShopArrId]);
+      newShopState.products[findProductById(productid, this.state.shops[this.state.currentShopArrId])]["stock"] -= 1;
+      console.log(newShopState);
+      this.setState({
+        shop: newShopState
+      });
+    }
+
+    // helpers
     /* 
       we get passed the product id. we need to find the shop.products array index of this product
     */
@@ -238,41 +255,118 @@ class App extends React.Component {
       return res;
     };
 
+    // OLD - replaced by actual logic
     // deduce from user capital
-    let newCapicalState = Object.assign({}, this.state.userBasic);
-    newCapicalState.capital -= this.state.shops[this.state.currentShop]
-      .products[findProductById(productid, this.state.shops[this.state.currentShop])]["price"];
-    this.setState({
-      userBasic: newCapicalState
-    });
+    /*     let newCapicalState = Object.assign({}, this.state.userBasic);
+        newCapicalState.capital -= this.state.shops[this.state.currentShop]
+          .products[findProductById(productid, this.state.shops[this.state.currentShop])]["price"];
+        this.setState({
+          userBasic: newCapicalState
+        }); */
 
-    // deduce from shop stock
-    let newShopState = Object.assign({}, this.state.shops[this.state.currentShop]);
-    newShopState.products[findProductById(productid, this.state.shops[this.state.currentShop])]["stock"] -= 1;
-    console.log(newShopState);
-    this.setState({
-      shop: newShopState
-    });
 
+
+    // OLD - replaced by actual logic
     // add to user stock
-    let newUserStockState = Object.assign([], this.state.userStock);
-    if (findStockById(productid, this.state.userStock) < 0) {
-      let newInventory = {
-        "id": productid,
-        "name": this.state.shops[this.state.currentShop].products[findProductById(productid, this.state.shops[this.state.currentShop])].name,
-        "description": this.state.shops[this.state.currentShop].products[findProductById(productid, this.state.shops[this.state.currentShop])].name,
-        "quantity": 1
-      }
-      newUserStockState.push(newInventory)
-    } else {
-      newUserStockState[findStockById(productid, this.state.userStock)]["quantity"] += 1;
-    }
-    this.setState({
-      userStock: newUserStockState
-    });
+    /*     let newUserStockState = Object.assign([], this.state.userStock);
+        if (findStockById(productid, this.state.userStock) < 0) {
+          let newInventory = {
+            "id": productid,
+            "name": this.state.shops[this.state.currentShop].products[findProductById(productid, this.state.shops[this.state.currentShop])].name,
+            "description": this.state.shops[this.state.currentShop].products[findProductById(productid, this.state.shops[this.state.currentShop])].name,
+            "quantity": 1
+          }
+          newUserStockState.push(newInventory)
+        } else {
+          newUserStockState[findStockById(productid, this.state.userStock)]["quantity"] += 1;
+        }
+        this.setState({
+          userStock: newUserStockState
+        }); */
   }; // handleBuy
 
-  handleSell(productid) {
+
+
+  /* 
+    POST to /shops/sell, 
+    update userBasic with resulting user capital.
+    shop stock is going to be reduced on the frontend if everything went well (see main method)
+  
+  */
+
+  // helper
+  async postSellProduct(shopid, productid, quantity) {
+    const res = await fetch(`${this.BACKEND_SERVER_URL}/shops/sell`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        shop_id: shopid,
+        id: productid,
+        quantity: quantity
+      })
+    })
+    if (res.status == 200) {
+      let { userBasic, userStock } = await res.json();
+      // update state
+      let newUserBasic = Object.assign({}, this.state.userBasic);
+      console.log("newUserBasic: ", newUserBasic);
+      console.log("userBasic: ", userBasic);
+      newUserBasic.capital = userBasic.capital;
+      this.setState({
+        userBasic: newUserBasic,
+        userStock: userStock
+      })
+      return true
+    } else {
+      alert("Failed selling the item.")
+    }
+  }
+
+  async handleSell(productid) {
+    const shopid = this.state.currentShop;
+    const sellResult = await this.postSellProduct(shopid, productid, 1);
+
+
+    // OLD - replaced by actual logic
+    // add to user capital
+    /*     let newCapicalState = Object.assign({}, this.state.userBasic);
+        newCapicalState.capital += this.state.shops[this.state.currentShop].products[findProductById(productid, this.state.shop)]["price"]
+        this.setState({
+          userBasic: newCapicalState
+        });
+    
+        console.log("clicked sell: ", productid);
+        let newShopState = Object.assign({}, this.state.shops[this.state.currentShop]);
+        const arrId = findProductById(productid, this.state.shops[this.state.currentShop]);
+        newShopState.products[arrId]["stock"] += 1;
+        console.log(newShopState);
+        this.setState({
+          shop: newShopState
+        }); */
+
+
+    // OLD - replaced by actual logic
+    // add to user stock
+    /*     let newUserStockState = Object.assign([], this.state.userStock);
+        if (findStockById(productid, this.state.userStock) < 0) {
+          let newInventory = {
+            "id": productid,
+            "name": this.state.shops[this.state.currentShop].products[findProductById(productid, this.state.shops[this.state.currentShop])].name,
+            "description": this.state.shops[this.state.currentShop].products[findProductById(productid, this.state.shops[this.state.currentShop])].name,
+            "quantity": 1
+          }
+          newUserStockState.push(newInventory)
+        } else {
+          newUserStockState[findStockById(productid, this.state.userStock)]["quantity"] -= 1;
+        }
+        this.setState({
+          userStock: newUserStockState
+        }); */
+
+    // helpers
     function findProductById(productid, shop) {
       console.log("this is the shop inside findProductById: ", shop)
       for (var i = 0; i < shop.products.length; i++) {
@@ -291,54 +385,84 @@ class App extends React.Component {
       }
     };
 
-    // add to user capital
-    let newCapicalState = Object.assign({}, this.state.userBasic);
-    newCapicalState.capital += this.state.shops[this.state.currentShop].products[findProductById(productid, this.state.shop)]["price"]
-    this.setState({
-      userBasic: newCapicalState
-    });
-
-    console.log("clicked sell: ", productid);
-    let newShopState = Object.assign({}, this.state.shops[this.state.currentShop]);
-    const arrId = findProductById(productid, this.state.shops[this.state.currentShop]);
-    newShopState.products[arrId]["stock"] += 1;
-    console.log(newShopState);
-    this.setState({
-      shop: newShopState
-    });
-
-
-    // add to user stock
-    let newUserStockState = Object.assign([], this.state.userStock);
-    if (findStockById(productid, this.state.userStock) < 0) {
-      let newInventory = {
-        "id": productid,
-        "name": this.state.shops[this.state.currentShop].products[findProductById(productid, this.state.shops[this.state.currentShop])].name,
-        "description": this.state.shops[this.state.currentShop].products[findProductById(productid, this.state.shops[this.state.currentShop])].name,
-        "quantity": 1
-      }
-      newUserStockState.push(newInventory)
-    } else {
-      newUserStockState[findStockById(productid, this.state.userStock)]["quantity"] -= 1;
-    }
-    this.setState({
-      userStock: newUserStockState
-    });
-
   };
 
-  handleTravel(shopArrayIndex) {
+  handleTravel(shopId) { // shopId is the actual id, not the array index
+    let currentShopArrId = 0;
+    // we need also the array index of the new shop
+    for (var i = 0; i < this.state.shops.length; i++) {
+      if (this.state.shops[i].id == shopId) {
+        currentShopArrId = i;
+        break;
+      }
+    }
+    console.log("handleTravel: we are traveling to shopId: %s, with array index: %s ", shopId, currentShopArrId);
     this.setState({
-      currentShop: shopArrayIndex,
-
+      currentShop: shopId,
+      currentShopArrId:currentShopArrId
     })
+    this.loadShopProducts(shopId);
+  }
+
+  // helper
+  async loadShopProducts(shopId) {
+    let currentShopId;
+    if (shopId) {
+      currentShopId = shopId;
+    } else {
+      currentShopId = this.state.currentShop;
+    }
+    console.log("current shop: ", currentShopId);
+    let res = await fetch(`${this.BACKEND_SERVER_URL}/shops/` + currentShopId);
+    if (res.status == 200) {
+      let currentShop = await res.json();
+      console.log("new shop: ", currentShop)
+      // update state
+      let shops;
+      let replaced = false;
+      shops = Object.assign([], this.state.shops);
+      for (var i = 0; i < this.state.shops.length; i++) {
+        if (this.state.shops[i].id == currentShop.id) {
+          shops[i] = currentShop;
+          replaced = true;
+        }
+      }
+      if (!replaced) {
+        shops.push(currentShop);
+      }
+      this.setState({
+        shops: shops
+      })
+    } else {
+      alert("Couldn't get current shop's products.")
+    }
+  }
+
+  // check if we own a valid token. if yes: set state.loggedIn to true
+  // load shop once
+  // TODO
+  componentDidMount() {
+    console.log("called componentDidMount");
+    if (!this.state.loggedIn) {
+      /* 
+        check if token
+        check if token still valid (by expiration date in the payload)
+        if yes: set state.loggedIn to true
+        TODO: If we get a 404 anyway anywhere, we should set state.loggedIn to false
+      */
+    }
+
+    // load shops. TODO set a proper condition to ensure it has been loaded only once, or figure out why componentDidMount currently runs twice
+    if (true) {
+      this.loadShopProducts();
+    }
+
   }
 
   render() {
 
 
-
-    const mapShop = this.state.shops[this.state.currentShop].products.map((element, index) => {
+    const mapShop = this.state.shops[this.state.currentShopArrId].products.map((element, index) => {
       return (
         <table>
           <tr>
@@ -352,7 +476,7 @@ class App extends React.Component {
               {element.price}
             </td>
             <td>
-              {element.ask_data}
+              {element.ask_price}
             </td>
             <td>
               {element.stock}
@@ -377,11 +501,11 @@ class App extends React.Component {
             <td>
               {element.name}
             </td>
-            <td>
+{/*             <td>
               {element.description}
-            </td>
+            </td> */}
             <td>
-              <button onClick={() => this.handleTravel(index)}>Travel</button>
+              <button onClick={() => this.handleTravel(element.id)}>Travel</button>
             </td>
           </tr>
         </table>
@@ -420,7 +544,7 @@ class App extends React.Component {
           </div>
           <div className="Main">
             <div className="MainUpper">
-              <h1>{this.state.shops[this.state.currentShop].name}</h1>
+              <h1>{this.state.shops[this.state.currentShopArrId].name}</h1>
               {mapShop}
             </div>
             <div className="MainLower">

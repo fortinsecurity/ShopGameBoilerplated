@@ -152,7 +152,14 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 # @router.get("/users/me/", response_model=User)
 @router.get("/users/me/")
 async def read_users_me(current_user: User = Depends(get_current_active_user)):
-    return current_user
+    print("current user username: ", current_user.username)
+    query = inventory.select().where(inventory.c.user_username == current_user.username)
+    try:
+        userInventory = await database.fetch_all(query)
+        return {"userBasic":current_user, "userStock":userInventory}
+    except Exception as e:
+        return e
+    
 
 
 @router.get("/users/me/items/")
