@@ -399,7 +399,7 @@ class App extends React.Component {
     console.log("handleTravel: we are traveling to shopId: %s, with array index: %s ", shopId, currentShopArrId);
     this.setState({
       currentShop: shopId,
-      currentShopArrId:currentShopArrId
+      currentShopArrId: currentShopArrId
     })
     this.loadShopProducts(shopId);
   }
@@ -464,32 +464,33 @@ class App extends React.Component {
 
     const mapShop = this.state.shops[this.state.currentShopArrId].products.map((element, index) => {
       return (
-        <table>
-          <tr>
-            <td>
-              {element.id}
-            </td>
-            <td>
-              {element.name}
-            </td>
-            <td>
-              {element.price}
-            </td>
-            <td>
-              {element.ask_price}
-            </td>
-            <td>
-              {element.stock}
-            </td>
-            <td>
+        <tr>
+          <td>
+            {element.id}
+          </td>
+          <td>
+            {element.name}
+          </td>
+          <td>
+            {element.price}
+          </td>
+          <td>
+            {element.ask_price}
+          </td>
+          <td>
+            {element.stock}
+          </td>
+          <td>
+            {this.state.userBasic.loggedIn &&
               <button onClick={() => this.handleBuy(element.id)}>Buy 1</button>
-            </td>
-            <td>
+            }
+          </td>
+          <td>
+            {this.state.userBasic.loggedIn &&
               <button onClick={() => this.handleSell(element.id)}>Sell 1</button>
-            </td>
-          </tr>
-
-        </table>
+            }
+          </td>
+        </tr>
       );
     });
 
@@ -501,7 +502,7 @@ class App extends React.Component {
             <td>
               {element.name}
             </td>
-{/*             <td>
+            {/*             <td>
               {element.description}
             </td> */}
             <td>
@@ -545,7 +546,26 @@ class App extends React.Component {
           <div className="Main">
             <div className="MainUpper">
               <h1>{this.state.shops[this.state.currentShopArrId].name}</h1>
-              {mapShop}
+              <table>
+                <tr>
+                  <th>
+                    ID
+                  </th>
+                  <th>
+                    Name
+                  </th>
+                  <th>
+                    Buy Price
+                  </th>
+                  <th>
+                    Sell Price
+                  </th>
+                  <th>
+                    Stock
+                  </th>
+                </tr>
+                {mapShop}
+              </table>
             </div>
             <div className="MainLower">
               <h2>Status message</h2>
