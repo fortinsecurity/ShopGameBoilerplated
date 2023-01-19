@@ -405,6 +405,20 @@ class App extends React.Component {
   }
 
   // helper
+
+  async loadShops() {
+    let res = await fetch(`${this.BACKEND_SERVER_URL}/shops/`);
+    if (res.status == 200) {
+      let shops = await res.json();
+      // update state
+      this.setState({
+        shops: shops
+      })
+    } else {
+      alert("Couldn't initialize all shops.")
+    }
+  }
+
   async loadShopProducts(shopId) {
     let currentShopId;
     if (shopId) {
@@ -454,6 +468,7 @@ class App extends React.Component {
 
     // load shops. TODO set a proper condition to ensure it has been loaded only once, or figure out why componentDidMount currently runs twice
     if (true) {
+      this.loadShops();
       this.loadShopProducts();
     }
 

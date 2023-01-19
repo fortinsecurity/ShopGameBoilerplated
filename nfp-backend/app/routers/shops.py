@@ -73,8 +73,21 @@ testResultDict = {
     ]
 }
 
+@router.get("/shops/")
+async def get_all_shops():
+    shopsQuery = shops.select()
+    try:
+        result = []
+        allshops = await database.fetch_all(shopsQuery)
+        for shop in allshops:
+            shopData = await get_shop(shop["id"])
+            result.append(shopData)
+        return result
+    except Exception as e:
+        return e
+    # return testResultDict
+
 @router.get("/shops/{shop_id}/", response_model=Shop)
-# @router.get("/shops/{shop_id}/")
 async def get_shop(shop_id: int = 1):
     shopsQuery = shops.select().where(shops.c.id == shop_id)
     productsQuery = products.select().where(products.c.shop_id == shop_id)

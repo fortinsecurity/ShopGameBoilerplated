@@ -3,6 +3,7 @@ import databases
 import sqlalchemy
 from sqlalchemy.orm import relationship
 from dotenv import load_dotenv
+import random # for random shop generation
 
 load_dotenv()
 
@@ -91,27 +92,19 @@ conn = engine.connect()
    {'id':2, 'username':'temp2', 'hashed_password':'$2b$12$IEjkZD7CGbRPuKs7kwA53eRxvr5Z.DZTiEmL4gxM5vV7b48Aja4Bu', "capital":"20000"}
 ])
 
-conn.execute(shops.insert(), [
+shopsInsertArray = [
    {'id':1, 'name':'Shop1', 'description':'some shop somewhere'},
-   {'id':2, 'name':'Shop2', 'description':'some shop somewhere else'}
-])
+   {'id':2, 'name':'Shop2', 'description':'some shop somewhere else'},
+   {'id':3, 'name':'Shop3', 'description':'some shop somewhere else'},
+   {'id':4, 'name':'Shop4', 'description':'some shop somewhere else'},
+   {'id':5, 'name':'Shop5', 'description':'some shop somewhere else'},
+   {'id':6, 'name':'Shop6', 'description':'some shop somewhere else'},
+   {'id':7, 'name':'Shop7', 'description':'some shop somewhere else'}
+]
 
-conn.execute(products.insert(), [
-   {'id':1, 'name':'Apples', "price":"200", "ask_price": 150, "stock":90, "shop_id":1},
-   {'id':2, 'name':'Bananas', "price":"400", "ask_price": 330, "stock":60,"shop_id":1},
-   {'id':3, 'name':'Kiwis', "price":"180", "ask_price": 150, "stock":70,"shop_id":1},
-   {'id':2, 'name':'Bananas', "price":"300", "ask_price": 250, "stock":30,"shop_id":2},
-   {'id':4, 'name':'Oranges', "price":"700", "ask_price": 600, "stock":50,"shop_id":2},
-   {'id':5, 'name':'Strawberries', "price":"700", "ask_price": 600, "stock":40,"shop_id":2}
-])
+conn.execute(shops.insert(), shopsInsertArray)
 
-conn.execute(inventory.insert(), [
-   {'id':1, 'name':'Apples', "quantity":2,"user_username":"temp1"},
-   {'id':2, 'name':'Bananas', "quantity":2,"user_username":"temp1"},
-   {'id':4, 'name':'Oranges', "quantity":9,"user_username":"temp2"}
-]) 
-
-conn.execute(all_products.insert(), [
+allProducts = [
    {'id':1, 'name':'Apples'},
    {'id':2, 'name':'Bananas'},
    {'id':3, 'name':'Kiwis'},
@@ -119,4 +112,38 @@ conn.execute(all_products.insert(), [
    {'id':5, 'name':'Strawberries'},
    {'id':6, 'name':'Tomatos'},
    {'id':7, 'name':'Pineapple'}
+]
+
+productsInsertArray = []
+
+for shop in shopsInsertArray:
+    # insert 4 random products
+    productsInsertForShop = random.sample(allProducts, 4)
+    # enrich with price data
+    for index,product in enumerate(productsInsertForShop):
+        productsInsertForShop[index]["price"] = random.randint(100,1000)
+        productsInsertForShop[index]["ask_price"] = productsInsertForShop[index]["price"]+random.randint(1,100)
+        productsInsertForShop[index]["stock"] = random.randint(10,200)
+        productsInsertForShop[index]["shop_id"] = shop["id"]
+    print(productsInsertForShop)
+    productsInsertArray.extend(productsInsertForShop)
+    conn.execute(products.insert(), productsInsertForShop) 
+
+
+conn.execute(inventory.insert(), [
+   {'id':1, 'name':'Apples', "quantity":2,"user_username":"temp1"},
+   {'id':2, 'name':'Bananas', "quantity":2,"user_username":"temp1"},
+   {'id':4, 'name':'Oranges', "quantity":9,"user_username":"temp2"}
+]) 
+
+conn.execute(all_products.insert(), allProducts) """
+
+
+""" conn.execute(products.insert(), [
+   {'id':1, 'name':'Apples', "price":"200", "ask_price": 150, "stock":90, "shop_id":1},
+   {'id':2, 'name':'Bananas', "price":"400", "ask_price": 330, "stock":60,"shop_id":1},
+   {'id':3, 'name':'Kiwis', "price":"180", "ask_price": 150, "stock":70,"shop_id":1},
+   {'id':2, 'name':'Bananas', "price":"300", "ask_price": 250, "stock":30,"shop_id":2},
+   {'id':4, 'name':'Oranges', "price":"700", "ask_price": 600, "stock":50,"shop_id":2},
+   {'id':5, 'name':'Strawberries', "price":"700", "ask_price": 600, "stock":40,"shop_id":2}
 ]) """
